@@ -1,0 +1,33 @@
+name: Update URLs on Merge to Main
+
+on:
+  pull_request:
+    types: [synchronize, reopened]
+    branches:
+      - main
+
+jobs:
+  update-urls:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Run URL update script
+        run: |
+          ./update_codes.sh
+        working-directory: ./.github/workflows/script
+
+      - name: Commit changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add .
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_TITLE=${{ github.event.pull_request.title }}
+          git commit -m "Update for PR #${PR_NUMBER}: ${PR_TITLE}"
+          git push https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }} HEAD:main

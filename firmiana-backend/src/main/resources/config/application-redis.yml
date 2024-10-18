@@ -1,0 +1,8 @@
+spring:
+  data:
+    redis:
+      host: ${{ secrets.REDIS_DEV_HOST }}
+      port: ${{ secrets.REDIS_DEV_PORT }}
+      database: ${{ secrets.REDIS_DEV_DATABASE }}
+      password: ${{ secrets.REDIS_DEV_PASSWORD }}
+      timeout: 100s

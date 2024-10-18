@@ -1,0 +1,48 @@
+name: "[Dev]前端docker构建"
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'firmiana-frontend/**'
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'firmiana-frontend/**'
+  workflow_dispatch:
+
+jobs:
+  Fronted-package-dev:
+    name: "[Dev]前端打包"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 初始化仓库
+        uses: actions/checkout@v4
+
+      - name: 切换到前端目录
+        run: cd ./firmiana-frontend
+
+      - name: 设置 Node.js 版本
+        uses: actions/setup-node@v3
+        with:
+          node-version: '21'
+          cache: 'npm'
+          cache-dependency-path: firmiana-frontend/package-lock.json
+
+      - name: 初始化环境 & 项目打包
+        run: |
+          npm install
+          npm run build:stage
+        working-directory: firmiana-frontend
+
+      - name: 部署测试页
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          branch: gh-pages
+          folder: firmiana-frontend/dist
+          token: ${{ secrets.GITHUB_TOKEN }}

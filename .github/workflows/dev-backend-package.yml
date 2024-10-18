@@ -1,0 +1,75 @@
+name: "[Dev]后端docker构建"
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'firmiana-backend/**'
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'firmiana-backend/**'
+  workflow_dispatch:
+
+jobs:
+  Backend-package-dev:
+    name: "[Dev]后端打包"
+    runs-on: ubuntu-latest
+    steps:
+      - name: 初始化仓库
+        uses: actions/checkout@v4
+
+      - name: 设置 JDK 17
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: 构建后端
+        run: |
+          chmod +x ./mvnw 
+          ./mvnw clean package -DskipTests
+        working-directory: firmiana-backend
+
+      - name: 创建docker镜像
+        run: |
+          docker build -t ghcr.io/firmiana/firmiana-backend:dev .
+
+      - name: 登录Github Docker仓库
+        run: echo "${{ secrets.CR_PAT }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: 推送docker
+        run: |
+          docker push ghcr.io/${{ github.repository }}/firmiana-backend:dev
+
+      - name: 部署到测试服务器
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_USER_NAME: ${{ secrets.SSH_USER_NAME }}
+          SSH_URL: ${{ secrets.SSH_URL }}
+        run: |
+          echo "${SSH_PRIVATE_KEY}" > private_key
+          chmod 600 private_key
+          echo "${SSH_USER_NAME}" > username
+          echo "${SSH_URL}" > ssh_url
+          chmod 600 username
+          chmod 600 ssh_url
+          ssh -o StrictHostKeyChecking=no -i private_key username@ssh_url << 'EOF'
+            docker pull ghcr.io/FelixSion28/firmiana-backend:dev
+            docker stop firmiana-backend-dev || true
+            docker rm firmiana-backend-dev || true
+            docker run -d --name firmiana-backend-dev -p 23500:3000 ghcr.io/FelixSion28/firmiana-backend:dev
+          EOF

@@ -1,0 +1,7 @@
+server:
+  port: 3000
+spring:
+  profiles:
+    include: db,redis
+  application:
+    name: firmiana
