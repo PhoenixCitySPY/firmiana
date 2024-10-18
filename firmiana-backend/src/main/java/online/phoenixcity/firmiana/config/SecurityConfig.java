@@ -1,6 +1,7 @@
 package online.phoenixcity.firmiana.config;
 
 
+import online.phoenixcity.firmiana.filter.EsiAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -13,7 +14,11 @@ public class SecurityConfig{
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-
+        http.csrf(csrf-> csrf.disable())
+                .authorizeRequests()
+                .requestMatchers("/esi/getToken").permitAll()  // 公开 API
+                .anyRequest().authenticated()  // 需要认证的请求
+                .and().addFilterBefore(new EsiAuthenticationFilter(),EsiAuthenticationFilter.class);
         return http.build();
     }
 }
